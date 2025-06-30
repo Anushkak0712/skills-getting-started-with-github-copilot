@@ -3,23 +3,45 @@ High School Management System API
 
 A super simple FastAPI application that allows students to view and sign up
 for extracurricular activities at Mergington High School.
+
+This API provides endpoints to:
+- List all available extracurricular activities
+- Sign up a student for an activity
+Static files for the frontend are served from the /static route.
 """
 
+
+# FastAPI imports for API creation and error handling
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 import os
 from pathlib import Path
 
-app = FastAPI(title="Mergington High School API",
-              description="API for viewing and signing up for extracurricular activities")
 
-# Mount the static files directory
+# Create FastAPI app instance with metadata
+app = FastAPI(
+    title="Mergington High School API",
+    description="API for viewing and signing up for extracurricular activities"
+)
+
+
+# Mount the static files directory to serve frontend assets
 current_dir = Path(__file__).parent
-app.mount("/static", StaticFiles(directory=os.path.join(Path(__file__).parent,
-          "static")), name="static")
+app.mount(
+    "/static",
+    StaticFiles(directory=os.path.join(current_dir, "static")),
+    name="static"
+)
 
-# In-memory activity database
+"""
+In-memory activity database.
+Each activity contains:
+- description: str
+- schedule: str
+- max_participants: int
+- participants: list of emails (str)
+"""
 activities = {
     "Chess Club": {
         "description": "Learn strategies and compete in chess tournaments",
@@ -81,29 +103,49 @@ activities = {
 }
 
 
+
 @app.get("/")
 def root():
+    """
+    Redirect root URL to the frontend static index.html page.
+    """
     return RedirectResponse(url="/static/index.html")
+
 
 
 @app.get("/activities")
 def get_activities():
+    """
+    Get a dictionary of all available activities and their details.
+    Returns:
+        dict: All activities with their info and participants.
+    """
     return activities
+
 
 
 @app.post("/activities/{activity_name}/signup")
 def signup_for_activity(activity_name: str, email: str):
-    """Sign up a student for an activity"""
-    # Validate activity exists
-    # Validate student is not already signed up
+    """
+    Sign up a student for an activity.
+    Args:
+        activity_name (str): The name of the activity to sign up for.
+        email (str): The student's email address.
+    Returns:
+        dict: Success message if signed up.
+    Raises:
+        HTTPException: If activity not found or email is empty.
+    """
+    # Validate email is not empty
     if email == "":
         raise HTTPException(status_code=400, detail="Email must not be empty")
+    # Validate activity exists
     if activity_name not in activities:
         raise HTTPException(status_code=404, detail="Activity not found")
 
     # Get the specific activity
     activity = activities[activity_name]
 
-    # Add student
+    # Add student to participants list
     activity["participants"].append(email)
     return {"message": f"Signed up {email} for {activity_name}"}
